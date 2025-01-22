@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, render_template, send_file
 import csv
 import urllib.parse as urlparse
 from selenium import webdriver
@@ -6,13 +6,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import os
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    # Render the HTML form
+    return render_template('index.html')
+
 @app.route('/scrape', methods=['POST'])
 def scrape():
-    # Get search term from the POST request
-    search_term = request.json.get('search_term', 'shoes for men')
+    # Get the search term from the form
+    search_term = request.form.get('search_term', 'shoes for men')
     search = search_term.replace(" ", "+")
 
     # Configure Selenium
@@ -28,6 +34,7 @@ def scrape():
     ]
 
     raw_data = []
+    csv_filename = f"flipkart_product_links_{search_term.replace(' ', '_')}.csv"
 
     try:
         for page_number, url in enumerate(urls, start=1):
@@ -54,14 +61,20 @@ def scrape():
         # Filter data to remove duplicates and pick only records where pid is present
         unique_data = {d["link"]: d for d in raw_data if d["pid"]}.values()
 
-        # Return JSON response
-        return jsonify(list(unique_data))
+        # Save unique data to a CSV file
+        with open(csv_filename, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=["search_term", "page_number", "link", "pid", "lid"])
+            writer.writeheader()
+            writer.writerows(unique_data)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return f"An error occurred: {str(e)}", 500
 
     finally:
         driver.quit()
+
+    # Provide the file for download
+    return send_file(csv_filename, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
