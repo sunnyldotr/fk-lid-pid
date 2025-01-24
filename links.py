@@ -30,7 +30,7 @@ def scrape():
 
     # List of URLs to scrape
     urls = [
-        f"https://www.flipkart.com/search?q={search}&sort=recency_desc&page={i}" for i in range(1, 3)
+        f"https://www.flipkart.com/search?q={search}&sort=recency_desc&page={i}&augment=false" for i in range(1, 5)
     ]
 
     raw_data = []
